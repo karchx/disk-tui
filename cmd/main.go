@@ -3,10 +3,12 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"math/rand"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
+	"time"
 
 	log "github.com/gothew/l-og"
 )
@@ -26,7 +28,7 @@ func NewCommand() Commands {
 func (c *Commands) Drives() string {
 	//var drives []string
 	//	driveMap := make(map[string]bool)
-	dfPattern := regexp.MustCompile("^(\\/[^ ]+)[^%]+%[ ]+(.+)$")
+	dfPattern := regexp.MustCompile(`^\/dev\/sd[a-z]+\d*`)
 
 	cmd := c.command
 	//	args := c.args
@@ -45,11 +47,12 @@ func (c *Commands) Drives() string {
 	for s.Scan() {
 		line := s.Text()
 		if dfPattern.MatchString(line) {
-			device := dfPattern.FindStringSubmatch(line)[1]
-			log.Infof("Device: %s", device)
-			//rootPath := dfPattern.FindStringSubmatch(line)[2]
+			device := dfPattern.FindStringSubmatch(line)[0]
+
+			//			rootPath := dfPattern.FindStringSubmatch(line)[2]
+			log.Infof("Root: %s", device)
 			//if ok := isMountDrive(device)
-			//isMountDrive(device)
+			//			isMountDrive(device)
 			//log.Infof("Device: %s is: %s", device, isMountDrive(device))
 		}
 	}
@@ -75,4 +78,31 @@ func isMountDrive(device string) bool {
 	}
 
 	return false
+}
+
+// TODO: move pkg utils
+var mu sync.Mutex
+
+func concurrentRandom() int {
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Ensure that each goroutine gets a unique seed based on the current Unix timestamp.
+	rand.Seed(time.Now().UnixNano())
+
+	return rand.Intn(101)
+}
+
+func main() {
+	var wg sync.WaitGroup
+
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			fmt.Println("Concurrent Random Number:", concurrentRandom())
+		}()
+	}
+
+	wg.Wait()
 }
