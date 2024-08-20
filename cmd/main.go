@@ -3,36 +3,37 @@ package cmd
 import (
 	"bufio"
 	"bytes"
-	"math/rand"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
-	"time"
 
 	log "github.com/gothew/l-og"
 )
 
 type Commands struct {
-	command string
-	args    []string
+	Command string
+	Args    []string
+	Path    string
 }
 
-func NewCommand() Commands {
-	return Commands{
-		command: "fdisk",
-		args:    []string{"-l"},
-	}
+func NewCommand(command Commands) Commands {
+	return command
 }
 
-func (c *Commands) Drives() string {
-	//var drives []string
-	//	driveMap := make(map[string]bool)
+func (c *Commands) Drives() ([]string, error) {
+	var drives []string
+
+	driveMap := make(map[string]bool)
+
+	// Regex for filter /dev/sdx
 	dfPattern := regexp.MustCompile(`^\/dev\/sd[a-z]+\d*`)
 
-	cmd := c.command
-	//	args := c.args
-	cm := exec.Command("sudo", "fdisk", "-l")
+	cmd := c.Command
+	args := c.Args
+	cm := exec.Command(cmd, args...)
 	cm.Stderr = os.Stderr
 	cm.Stdin = os.Stdin
 
@@ -48,21 +49,42 @@ func (c *Commands) Drives() string {
 		line := s.Text()
 		if dfPattern.MatchString(line) {
 			device := dfPattern.FindStringSubmatch(line)[0]
-
-			//			rootPath := dfPattern.FindStringSubmatch(line)[2]
-			log.Infof("Root: %s", device)
-			//if ok := isMountDrive(device)
-			//			isMountDrive(device)
-			//log.Infof("Device: %s is: %s", device, isMountDrive(device))
+			if ok := isMountDrive(device); ok {
+				driveMap[device] = true
+			}
 		}
 	}
 
-	output := string(out[:])
-	return output
+	for k := range driveMap {
+		drives = append(drives, k)
+	}
+
+	return drives, nil
 }
 
+func (c *Commands) MountDisk(drive string) (string, error) {
+	if c.Path == "" {
+		return "", errors.New("Missing path for mount drive")
+	}
+
+	cmd := c.Command
+	args := c.Args
+	args = append(args, drive)
+	args = append(args, c.Path)
+	cm := exec.Command(cmd, args...)
+
+	_, err := cm.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("%s is mount", c.Path), nil
+}
+
+// TODO: move to utils pkg
 func isMountDrive(device string) bool {
-	deviceVerifier := "ID_USB_DRIVER=usb-storage"
+	validDevice := "ID_USB_DRIVER=uas|ID_USB_DRIVER=usb-storage"
+	deviceVerifier := strings.Split(validDevice, "|")
 	cmd := "udevadm" // Command default, no changes
 	args := []string{"info", "-q", "property", "-n", device}
 	out, err := exec.Command(cmd, args...).Output()
@@ -71,38 +93,9 @@ func isMountDrive(device string) bool {
 		log.Errorf("Error checking device %s %s", device, err)
 	}
 
-	//	log.Infof("Device: %s return: %s", device, string(out))
-
-	if strings.Contains(string(out), deviceVerifier) {
+	if strings.Contains(string(out), deviceVerifier[0]) || strings.Contains(string(out), deviceVerifier[1]) {
 		return true
 	}
 
 	return false
-}
-
-// TODO: move pkg utils
-var mu sync.Mutex
-
-func concurrentRandom() int {
-	mu.Lock()
-	defer mu.Unlock()
-
-	// Ensure that each goroutine gets a unique seed based on the current Unix timestamp.
-	rand.Seed(time.Now().UnixNano())
-
-	return rand.Intn(101)
-}
-
-func main() {
-	var wg sync.WaitGroup
-
-	for i := 0; i < 5; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			fmt.Println("Concurrent Random Number:", concurrentRandom())
-		}()
-	}
-
-	wg.Wait()
 }
