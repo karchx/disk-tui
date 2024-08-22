@@ -24,6 +24,7 @@ func NewCommand(command Commands) Commands {
 }
 
 func (c *Commands) Drives() ([]string, error) {
+	log.Info("test")
 	var drives []string
 
 	driveMap := make(map[string]bool)

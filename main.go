@@ -1,29 +1,39 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
+	tea "github.com/charmbracelet/bubbletea"
 	log "github.com/gothew/l-og"
 	"github.com/karchx/disk-tui/cmd"
 	"github.com/karchx/disk-tui/ui"
 )
 
 func main() {
+	passwordCh := make(chan string)
 	var cli cmd.Commands
-	var tui ui.UI
+
+	go func() {
+		password := <-passwordCh
+		fmt.Print(password)
+	}()
 
 	cli = cmd.NewCommand(cmd.Commands{
 		Command: "sudo",
 		Args:    []string{"fdisk", "-l"},
 	})
+
 	drives, err := cli.Drives()
 	if err != nil {
 		log.Error(err)
 	}
 
-	tui = ui.NewUI(ui.UI{
-		Items: drives,
-	})
+	if _, err := tea.NewProgram(ui.NewModel(drives, passwordCh)).Run(); err != nil {
+		log.Errorf("Error running program: %s \n", err)
+		os.Exit(1)
+	}
 
-	tui.Start()
 	// cli = cmd.NewCommand(cmd.Commands{
 	// 	Command: "sudo",
 	// 	Args:    []string{"mount"},

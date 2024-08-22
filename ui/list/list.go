@@ -1,15 +1,13 @@
-package ui
+package list
 
 import (
 	"fmt"
 	"io"
-	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	log "github.com/gothew/l-og"
 )
 
 var (
@@ -47,21 +45,17 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 	fmt.Fprint(w, fn(str))
 }
 
-type model struct {
+type Model struct {
 	list   list.Model
 	device string
 	quit   bool
 }
 
-type UI struct {
-	Items []string
-}
-
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.list.SetWidth(msg.Width)
@@ -69,16 +63,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "q", "ctrl+c":
-			m.quit = true
-			return m, tea.Quit
-
 		case "enter":
 			i, ok := m.list.SelectedItem().(item)
 			if ok {
 				m.device = string(i)
 			}
-			return m, tea.Quit
+			return m, nil
 		}
 	}
 
@@ -87,7 +77,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) View() string {
+func (m Model) View() string {
 	if m.device != "" {
 		return quitTextStyle.Render(fmt.Sprintf("%s Device Select.", m.device))
 	}
@@ -97,14 +87,10 @@ func (m model) View() string {
 	return "\n" + m.list.View()
 }
 
-func NewUI(ui UI) UI {
-	return ui
-}
-
-func (ui *UI) Start() {
+func NewModel(drives []string) Model {
 	var items []list.Item
 
-	for _, i := range ui.Items {
+	for _, i := range drives {
 		items = append(items, item(i))
 	}
 
@@ -119,10 +105,7 @@ func (ui *UI) Start() {
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
-	m := model{list: l}
+	m := Model{list: l}
 
-	if _, err := tea.NewProgram(m).Run(); err != nil {
-		log.Errorf("Error running program: %s \n", err)
-		os.Exit(1)
-	}
+	return m
 }
