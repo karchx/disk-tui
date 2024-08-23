@@ -4,7 +4,6 @@ import (
 	"github.com/karchx/disk-tui/ui/input"
 	"github.com/karchx/disk-tui/ui/list"
 
-	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -21,17 +20,17 @@ type Model struct {
 	input input.Model
 }
 
-func NewModel(drives []string, password chan string) Model {
+func NewModel(drives []string) Model {
 	m := Model{
-		input: input.NewModel(password),
+		input: input.NewModel(),
 		list:  list.NewModel(drives),
-		state: inputState,
+		state: listState,
 	}
 	return m
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink)
+	return nil
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

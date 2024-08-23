@@ -7,10 +7,9 @@ import (
 
 type Model struct {
 	textInput textinput.Model
-	password  chan string
 }
 
-func NewModel(password chan string) Model {
+func NewModel() Model {
 	ti := textinput.New()
 	ti.Placeholder = "Enter password"
 	ti.Focus()
@@ -21,7 +20,6 @@ func NewModel(password chan string) Model {
 
 	return Model{
 		textInput: ti,
-		password:  password,
 	}
 }
 
@@ -36,8 +34,6 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
-			m.password <- m.textInput.Value()
-			close(m.password)
 			return m, nil
 		}
 
@@ -48,5 +44,5 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	return "Enter sudo password:\n" + m.textInput.View() + "\n"
+	return m.textInput.View() + "\n"
 }

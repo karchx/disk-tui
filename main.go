@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -11,13 +10,7 @@ import (
 )
 
 func main() {
-	passwordCh := make(chan string)
 	var cli cmd.Commands
-
-	go func() {
-		password := <-passwordCh
-		fmt.Print(password)
-	}()
 
 	cli = cmd.NewCommand(cmd.Commands{
 		Command: "sudo",
@@ -29,7 +22,7 @@ func main() {
 		log.Error(err)
 	}
 
-	if _, err := tea.NewProgram(ui.NewModel(drives, passwordCh)).Run(); err != nil {
+	if _, err := tea.NewProgram(ui.NewModel(drives), tea.WithAltScreen()).Run(); err != nil {
 		log.Errorf("Error running program: %s \n", err)
 		os.Exit(1)
 	}

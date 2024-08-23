@@ -24,7 +24,6 @@ func NewCommand(command Commands) Commands {
 }
 
 func (c *Commands) Drives() ([]string, error) {
-	log.Info("test")
 	var drives []string
 
 	driveMap := make(map[string]bool)
@@ -50,8 +49,11 @@ func (c *Commands) Drives() ([]string, error) {
 		line := s.Text()
 		if dfPattern.MatchString(line) {
 			device := dfPattern.FindStringSubmatch(line)[0]
-			if ok := isMountDrive(device); ok {
-				driveMap[device] = true
+			for key, ok := range isMountDrive(device) {
+				if ok {
+					keyDevice := device + " - " + key // Name device + type device
+					driveMap[keyDevice] = true
+				}
 			}
 		}
 	}
@@ -83,20 +85,52 @@ func (c *Commands) MountDisk(drive string) (string, error) {
 }
 
 // TODO: move to utils pkg
-func isMountDrive(device string) bool {
+func isMountDrive(device string) map[string]bool {
+	deviceMap := make(map[string]bool)
 	validDevice := "ID_USB_DRIVER=uas|ID_USB_DRIVER=usb-storage"
 	deviceVerifier := strings.Split(validDevice, "|")
 	cmd := "udevadm" // Command default, no changes
 	args := []string{"info", "-q", "property", "-n", device}
 	out, err := exec.Command(cmd, args...).Output()
-
 	if err != nil {
 		log.Errorf("Error checking device %s %s", device, err)
 	}
 
 	if strings.Contains(string(out), deviceVerifier[0]) || strings.Contains(string(out), deviceVerifier[1]) {
-		return true
+		infoDriver := getInfoDriveLine(string(out), "ID_USB_DRIVER", "=")
+		deviceMap[infoDriver] = true
+		return deviceMap
+	}
+	deviceMap[""] = false
+	return deviceMap
+}
+
+func getInfoDriveLine(info string, keyFilter string, separator string) string {
+	var findLine string
+	scanner := bufio.NewScanner(strings.NewReader(info))
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, keyFilter) {
+			findLine = line
+			break
+		}
 	}
 
-	return false
+	if err := scanner.Err(); err != nil {
+		log.Errorf("Error leyendo el texto: %s\n", err)
+	}
+	splitFind := strings.Split(findLine, separator)
+
+	// get last value and return after
+	findLine = splitFind[len(splitFind)-1]
+
+	// uas is 'hard drive'
+	if findLine == "uas" {
+		findLine = "hard-drive"
+	} else {
+		findLine = findLine
+	}
+
+	return findLine
 }
