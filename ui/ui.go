@@ -21,12 +21,12 @@ type Model struct {
 }
 
 func NewModel(drives []string) Model {
-	context := make(chan string)
 	m := Model{
-		input: input.NewModel(context, "Path mount device (/to/path)"),
-		list:  list.NewModel(drives, context),
+		list:  list.NewModel(drives),
+		input: input.NewModel("Path mount device (/to/path)"),
 		state: listState,
 	}
+
 	return m
 }
 
@@ -56,6 +56,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case listState:
 			list, cmd := m.list.Update(msg)
 			m.list = list
+			m.input.SetDevice(m.list.DeviceMount)
 
 			if msg.String() == "enter" {
 				m.state = inputState

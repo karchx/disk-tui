@@ -11,22 +11,21 @@ import (
 
 type Model struct {
 	textInput textinput.Model
-	context   chan string
+	device    string
 }
 
-func NewModel(context chan string, placeholder string) Model {
+func NewModel(placeholder string) Model {
 	ti := textinput.New()
 	ti.Placeholder = placeholder
 	ti.Focus()
 	ti.CharLimit = 156
-	ti.Width = 20
-	// Many confi echo model ?
+	ti.Width = 100
+	// Maybe config echo model ?
 	//	ti.EchoMode = textinput.EchoPassword
 	//	ti.EchoCharacter = '*'
 
 	return Model{
 		textInput: ti,
-		context:   context,
 	}
 }
 
@@ -42,17 +41,20 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter:
 			path := m.textInput.Value()
-			device := <-m.context
+			device := m.device
+
 			cli := cmdk.NewCommand(cmdk.Commands{
 				Command: "sudo",
 				Args:    []string{"mount"},
 				Path:    path,
 			})
 			_, err := cli.MountDisk(device)
+
 			if err != nil {
 				log.Error(err)
 				os.Exit(1)
 			}
+
 			return m, nil
 		}
 
@@ -64,4 +66,8 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
 	return m.textInput.View() + "\n"
+}
+
+func (m Model) SetDevice(device string) {
+	m.device = device
 }
