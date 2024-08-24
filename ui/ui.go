@@ -21,9 +21,10 @@ type Model struct {
 }
 
 func NewModel(drives []string) Model {
+	context := make(chan string)
 	m := Model{
-		input: input.NewModel(),
-		list:  list.NewModel(drives),
+		input: input.NewModel(context, "Path mount device (/to/path)"),
+		list:  list.NewModel(drives, context),
 		state: listState,
 	}
 	return m
@@ -39,25 +40,28 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
-		case "enter":
-			if m.state == inputState {
-				m.state = listState
-			}
 		case "q", "ctrl+c":
 			return m, tea.Quit
 		}
-	}
 
-	switch m.state {
-	case inputState:
-		input, cmd := m.input.Update(msg)
-		m.input = input
-		return m, cmd
+		switch m.state {
+		case inputState:
+			input, cmd := m.input.Update(msg)
+			m.input = input
+			if msg.String() == "enter" {
+				m.state = listState
+			}
+			return m, cmd
 
-	case listState:
-		list, cmd := m.list.Update(msg)
-		m.list = list
-		return m, cmd
+		case listState:
+			list, cmd := m.list.Update(msg)
+			m.list = list
+
+			if msg.String() == "enter" {
+				m.state = inputState
+			}
+			return m, cmd
+		}
 	}
 
 	return m, cmd

@@ -26,15 +26,4 @@ func main() {
 		log.Errorf("Error running program: %s \n", err)
 		os.Exit(1)
 	}
-
-	// cli = cmd.NewCommand(cmd.Commands{
-	// 	Command: "sudo",
-	// 	Args:    []string{"mount"},
-	// 	Path:    "/mnt/setup-stiv",
-	// })
-	// message, err := cli.MountDisk(drives[0])
-	// if err != nil {
-	// 	log.Error(err)
-	// }
-	// fmt.Print(message)
 }

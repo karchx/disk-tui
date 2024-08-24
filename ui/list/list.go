@@ -46,9 +46,10 @@ func (d itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 }
 
 type Model struct {
-	list   list.Model
-	device string
-	quit   bool
+	list    list.Model
+	device  string
+	quit    bool
+	context chan string
 }
 
 func (m Model) Init() tea.Cmd {
@@ -66,7 +67,11 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case "enter":
 			i, ok := m.list.SelectedItem().(item)
 			if ok {
-				m.device = string(i)
+				go func() {
+					m.device = string(i)
+					device := strings.Split(m.device, "-")[0] // first position is name path device
+					m.context <- device
+				}()
 			}
 			return m, nil
 		}
@@ -87,7 +92,7 @@ func (m Model) View() string {
 	return "\n" + m.list.View()
 }
 
-func NewModel(drives []string) Model {
+func NewModel(drives []string, context chan string) Model {
 	var items []list.Item
 
 	for _, i := range drives {
@@ -105,7 +110,10 @@ func NewModel(drives []string) Model {
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
 
-	m := Model{list: l}
+	m := Model{
+		list:    l,
+		context: context,
+	}
 
 	return m
 }
